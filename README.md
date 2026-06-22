@@ -2,104 +2,67 @@
 
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)
 ![Gin](https://img.shields.io/badge/Gin-Web_Framework-00ADD8)
-![MySQL](https://img.shields.io/badge/MySQL-RDS-4479A1?logo=mysql)
-![AWS](https://img.shields.io/badge/AWS-ECS%20%7C%20S3%20%7C%20RDS-FF9900?logo=amazonaws)
-![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker)
-![JWT](https://img.shields.io/badge/JWT-Authentication-black)
-![Swagger](https://img.shields.io/badge/Swagger-API_Document-85EA2D?logo=swagger)
-
-JWT認証付き画像管理APIです。
-
-ログインしたユーザーごとに画像を管理し、
-
-- AWS S3への画像保存
-- Amazon RDS(MySQL)へのメタデータ保存
-- ECS(Fargate)へのデプロイ
-- SwaggerによるAPIドキュメント
-
-を実装しています。
+![JWT](https://img.shields.io/badge/JWT-Authentication-orange)
+![AWS](https://img.shields.io/badge/AWS-S3%20%2F%20ECS-yellow)
+![Docker](https://img.shields.io/badge/Docker-Container-blue?logo=docker)
+![MySQL](https://img.shields.io/badge/MySQL-Database-blue)
+![Swagger](https://img.shields.io/badge/Swagger-API_Documentation-green)
 
 ---
 
-# デモ
+# 概要
 
-Swagger
+JWT認証を利用した画像管理APIです。
 
-```
-http://xxx.xxx.xxx.xxx:8080/swagger/index.html
-```
+ログインしたユーザーのみ、
 
----
+- 画像アップロード
+- 画像一覧取得
+- 画像削除
 
-# スクリーンショット
+を実行できます。
 
-## Swagger
+アップロードされた画像はAWS S3へ保存し、
+メタ情報はMySQLに保存しています。
 
-![swagger](docs/images/swagger.png)
-
----
-
-## Login
-
-![login](docs/images/login.png)
-
----
-
-## Upload Image
-
-![upload](docs/images/upload.png)
-
----
-
-## Get Images
-
-![get](docs/images/get-images.png)
-
----
-
-## Delete Image
-
-![delete](docs/images/delete-image.png)
+Dockerによるコンテナ化を行い、
+AWS ECS(Fargate)上へデプロイしています。
 
 ---
 
 # 使用技術
 
 | Category | Technology |
-|-----------|-----------|
+|------------|-----------|
 | Language | Go 1.26 |
 | Framework | Gin |
-| ORM | GORM |
 | Authentication | JWT |
-| Database | MySQL (Amazon RDS) |
+| Database | MySQL |
+| ORM | GORM |
 | Storage | Amazon S3 |
 | Container | Docker |
-| Container Registry | Amazon ECR |
-| Compute | Amazon ECS(Fargate) |
+| Cloud | ECS(Fargate) |
 | Documentation | Swagger |
-| Architecture | Repository Pattern |
+| Version Control | Git / GitHub |
 
 ---
 
-# AWS構成図
+# システム構成図
 
 ```mermaid
-flowchart TD
+graph TD
 
-User[User]
+A[Swagger UI]
+--> B[Go API Server]
 
-Swagger[Swagger UI]
+B --> C[JWT Authentication]
 
-ECS[ECS Fargate<br>Go + Gin]
+B --> D[(MySQL)]
 
-RDS[(Amazon RDS<br>MySQL)]
+B --> E[S3 Bucket]
 
-S3[(Amazon S3)]
+B --> F[ECS Fargate]
 
-User --> Swagger
-Swagger --> ECS
-ECS --> RDS
-ECS --> S3
 ```
 
 ---
@@ -111,223 +74,268 @@ erDiagram
 
 users ||--o{ images : owns
 
-users {
-
-BIGINT id PK
-VARCHAR name
-VARCHAR email
-VARCHAR password
-DATETIME created_at
-
+users{
+uint id
+string name
+string email
+string password
+datetime created_at
 }
 
-images {
-
-BIGINT id PK
-BIGINT user_id FK
-VARCHAR file_name
-VARCHAR file_path
-DATETIME created_at
-
+images{
+uint id
+uint user_id
+string file_name
+string file_path
+datetime created_at
 }
+
 ```
 
 ---
 
 # API一覧
 
-## 認証
-
-### POST /register
-
-ユーザー登録
-
-```json
-{
-"name":"test",
-"email":"test@example.com",
-"password":"password123"
-}
-```
-
----
-
-### POST /login
-
-JWT取得
-
-```json
-{
-"email":"test@example.com",
-"password":"password123"
-}
-```
-
----
-
-## 画像管理
-
-### POST /images
-
-画像アップロード
-
-Authorization: Bearer Token 必須
-
-multipart/form-data
-
----
-
-### GET /images
-
-ログインユーザーの画像一覧取得
-
----
-
-### DELETE /images/{id}
-
-画像削除
-
-S3とDBから削除
+| Method | Endpoint | Description |
+|----------|---------|------------|
+| POST | /register | ユーザー登録 |
+| POST | /login | JWT取得 |
+| POST | /images | 画像アップロード |
+| GET | /images | 画像一覧取得 |
+| DELETE | /images/{id} | 画像削除 |
 
 ---
 
 # ディレクトリ構成
 
-```bash
-.
+```text
+go-image-api
+│
+├── cmd
+├── config
 ├── controllers
+├── docs
+├── dto
+├── images
+│   ├── swagger.png
+│   ├── login.png
+│   ├── upload.png
+│   ├── get.png
+│   └── delete.png
 ├── middleware
 ├── models
 ├── repositories
 ├── routes
 ├── services
-├── docs
+├── uploads
+├── utils
 ├── Dockerfile
-├── go.mod
+├── docker-compose.yml
 ├── main.go
 └── README.md
 ```
 
 ---
 
+# Swagger UI
+
+## Top
+
+![swagger](images/swagger.png)
+
+---
+
+## JWTログイン
+
+JWTトークンを発行します。
+
+![login](images/login.png)
+
+---
+
+## S3画像アップロード
+
+画像をS3へ保存し、URLをDBへ登録します。
+
+![upload](images/upload.png)
+
+---
+
+## 画像一覧取得
+
+ログインユーザーの画像一覧を取得します。
+
+![get](images/get.png)
+
+---
+
+## 画像削除
+
+S3とDBから画像を削除します。
+
+![delete](images/delete.png)
+
+---
+
+# AWS構成図
+
+```mermaid
+graph TD
+
+User
+--> Swagger
+
+Swagger
+--> ECS
+
+ECS
+--> S3
+
+ECS
+--> RDS
+
+```
+
+---
+
 # 工夫した点
 
-### JWT認証によるユーザー単位の画像管理
+### レイヤードアーキテクチャ
 
-ログインユーザーごとに画像を管理できるよう実装しました。
+責務を分離するため、
 
----
+- controllers
+- services
+- repositories
+- models
 
-### Repository Patternを採用
-
-ControllerとDBアクセス処理を分離し、
-
-- 保守性
-- 可読性
-- 拡張性
-
-を意識した設計にしました。
+に分割し保守性を高めました。
 
 ---
 
-### IAM Roleを利用した認証情報管理
+### JWT認証
 
-アクセスキーをソースコードに埋め込まず、
+ログインユーザーのみAPIを利用できるように実装しました。
 
-ECS Task RoleからS3へアクセスする構成にしました。
+---
+
+### UUIDによるファイル名管理
+
+画像名の重複を防ぐため、
+
+```go
+uuid.New().String()
+```
+
+を利用しています。
 
 ---
 
 ### Docker化
 
-ローカル環境と本番環境の差異をなくし、
-
-ECS(Fargate)へそのままデプロイできる構成にしました。
+ローカルと本番環境の差異をなくすため、
+Dockerコンテナ化を行いました。
 
 ---
 
-### SwaggerによるAPIドキュメント自動生成
+### AWS ECS(Fargate)
 
-API仕様を可視化し、
-
-フロントエンドや他開発者との連携を想定した構成にしました。
+コンテナをAWS ECS上へデプロイし、
+クラウド環境で動作する構成を構築しました。
 
 ---
 
 # 苦労した点
 
-### ECS Task RoleとS3権限周り
+AWS ECSからS3へアクセスする際、
 
-アクセスキーを使用せずIAM Roleで認証する構成にしたため、
+- IAMロール
+- ECSタスクロール
+- TLS証明書
+- Dockerイメージ更新
 
-Task RoleとExecution Roleの違い、
+など複数の問題が発生しました。
 
-S3への権限設定について理解しながら実装しました。
+CloudWatchログを確認しながら原因を特定し、
+IAMロールとDockerfileの修正によって解決しました。
 
----
-
-### Docker環境でのCA証明書エラー
-
-S3接続時に
-
-```
-x509: certificate signed by unknown authority
-```
-
-が発生したため、
-
-Dockerfileに
-
-```
-ca-certificates
-```
-
-を追加して解決しました。
-
----
-
-### ECSデプロイ後のパブリックIP変更
-
-新規デプロイのたびにIPアドレスが変わる問題があり、
-
-SwaggerのHost設定を削除して相対パス化することで対応しました。
+AWSインフラ周りの理解を深めることができました。
 
 ---
 
 # 今後の改善
 
-- CloudFront導入
-- ALB + 独自ドメイン化
-- HTTPS化
+- Presigned URL対応
+- 画像サイズ制限
+- png/jpeg以外のバリデーション
+- Pagination実装
+- Unit Test追加
 - GitHub ActionsによるCI/CD
-- ページネーション
-- サムネイル生成
-- 画像圧縮
-- 画像検索機能
-- Redisによるキャッシュ
-- CloudWatch Logsの整備
+- CloudFront対応
+- Redisキャッシュ導入
+- TerraformによるIaC化
 
 ---
 
-# 学習ポイント
+# エンドポイント例
 
-- Go(Gin)によるREST API開発
+## Login
+
+```json
+POST /login
+
+{
+  "email":"test@example.com",
+  "password":"password123"
+}
+```
+
+Response
+
+```json
+{
+  "token":"JWT_TOKEN"
+}
+```
+
+---
+
+## Upload
+
+```text
+POST /images
+
+Authorization: Bearer JWT_TOKEN
+multipart/form-data
+```
+
+Response
+
+```json
+{
+  "message":"upload success",
+  "url":"https://xxx.s3.ap-northeast-1.amazonaws.com/..."
+}
+```
+
+---
+
+# 学習目的
+
+本プロジェクトでは、
+
+- Go
+- Gin
 - JWT認証
-- Repository Pattern
+- GORM
+- MySQL
 - Docker
-- Amazon ECS(Fargate)
-- Amazon ECR
-- Amazon S3
-- Amazon RDS(MySQL)
-- IAM Role
+- AWS S3
+- ECS(Fargate)
 - Swagger
 
----
+を用いたバックエンド開発を経験し、
 
-# Author
+「認証付きREST API + AWSデプロイ」
 
-Yu Iwamoto
-
-GitHub
-
-https://github.com/xxxxxxxx/go-image-api
+まで一貫して実装しました。
