@@ -1,0 +1,47 @@
+# =========================
+# Build Stage
+# =========================
+FROM golang:1.26 AS builder
+
+WORKDIR /app
+
+# Go Modules
+COPY go.mod .
+COPY go.sum .
+
+RUN go mod download
+
+# ソースコードコピー
+COPY . .
+
+# Build
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+
+
+# =========================
+# Run Stage
+# =========================
+FROM debian:bookworm-slim
+
+# CA証明書をインストール（S3 HTTPS接続用）
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    update-ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /root
+
+# バイナリコピー
+COPY --from=builder /app/main .
+
+# Swagger docs
+COPY --from=builder /app/docs ./docs
+
+# uploadsディレクトリ（ローカル保存用の名残があっても問題ない）
+RUN mkdir -p uploads
+
+# ポート公開
+EXPOSE 8080
+
+# 起動
+CMD ["./main"]
